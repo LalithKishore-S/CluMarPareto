@@ -123,8 +123,8 @@ class NSGA2_FS():
 
         fronts = [[]]
 
-        for p in range(self.N):
-            for q in range(self.N):
+        for p in range(n):
+            for q in range(n):
                 if p == q:
                     continue
                 if initial_population[p].dominates(initial_population[q]):
