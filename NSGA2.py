@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 from sklearn.datasets import make_classification
 from sklearn.ensemble import RandomForestClassifier
-# from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import cross_val_score
 
 class Individual():
     def __init__(self, mask, obj_scores):
@@ -49,12 +50,21 @@ class NSGA2_FS():
     def fitness_evaluation(self, individual, X, y):
         n_features_selected = int(individual.sum())
         X_masked = X[:, individual]
-        model = RandomForestClassifier(n_estimators = 100, bootstrap = True, oob_score = True, n_jobs = -1, random_state = 42)
-        model.fit(X_masked, y)
 
-        oob_score = model.oob_score_
+        if self.classifier == 'randomforestclassifier':
+            model = RandomForestClassifier(n_estimators = 100, bootstrap = True, oob_score = True, n_jobs = -1, random_state = 42)
+            model.fit(X_masked, y)
 
-        return (n_features_selected, oob_score)
+            acc_score = model.oob_score_
+
+        elif self.classifier == 'decisiontree':
+            model = DecisionTreeClassifier(max_depth=5, random_state=42)  # shallow = sensitive to noise
+            acc_score = cross_val_score(model, X_masked, y, cv=5, n_jobs=-1).mean()
+
+        if acc_score <= 0.5:
+            acc_score = 0
+
+        return (n_features_selected, acc_score)
     
     def tournament_select(self, population):
         i, j = np.random.choice(len(population), size=2, replace=False)
@@ -71,10 +81,8 @@ class NSGA2_FS():
             return parent_a.mask_features.copy(), parent_b.mask_features.copy()
 
         point   = np.random.randint(1, self.n_cols)
-        child_a = np.concatenate([parent_a.mask_features[:point],
-                                   parent_b.mask_features[point:]])
-        child_b = np.concatenate([parent_b.mask_features[:point],
-                                   parent_a.mask_features[point:]])
+        child_a = np.concatenate([parent_a.mask_features[:point], parent_b.mask_features[point:]])
+        child_b = np.concatenate([parent_b.mask_features[:point], parent_a.mask_features[point:]])
         return child_a, child_b
 
     def mutate(self, chromosome):
@@ -178,6 +186,7 @@ class NSGA2_FS():
     def fit(self, data):
         self.columns = list(data.columns)
         self.n_cols = len(self.columns) - 1
+        self.mutation_rate = 1 / self.n_cols
         X = data.iloc[:,:-1].values
         y = data.iloc[:,-1].values
 
@@ -220,8 +229,7 @@ class NSGA2_FS():
         
         fronts = self.non_dominated_sorting(parent)
         pareto_front = [parent[i] for i in fronts[0]]
-        # pareto_front.sort(key=lambda ind: ind.obj_scores[0])
-
+        pareto_front.sort(key=lambda ind: ind.obj_scores[0])
 
         print(f"\nFinal Pareto Front ({len(pareto_front)} solutions):")
         print(f" {'Features_selected':>10} {'Features':>10} {'Accuracy':>10}")
@@ -234,13 +242,14 @@ class NSGA2_FS():
 def main():
     def generate_dataset():
         X, y = make_classification(
-            n_samples=1000,
+            n_samples=5000,
             n_features=30,
-            n_informative=10,   
-            n_redundant=5,      
-            n_repeated=5,
+            n_informative=2,   
+            n_redundant=1,      
+            n_repeated=1,
             n_classes=2,
-            random_state=42
+            random_state=42,
+            shuffle = False
         )
 
         feature_cols = [f"feature_{i+1}" for i in range(X.shape[1])]

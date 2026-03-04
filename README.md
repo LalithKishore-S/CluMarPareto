@@ -11,5 +11,8 @@ Cluster-Guided Markov Blanket Assisted Multi-Objective Feature Selection Using N
     - Added code for crowding distance computation 
     - Completed NSGA2 pipeline after crowding distance
 - To do:
-    - Add code for Decision Trees or other classifiers
-    - Explore NSGA3 or other improvements over crowding distance so that it NSGA works better for more than 2 objectives
+    - Explore NSGA3 or other improvements over crowding distance so that it NSGA works better for more than 2 obj
+
+- Observations:
+    - With two objectives, NSGA2 selects higher number of random features also in addition to informative features.
+    - So should try NSGA3, Enhanced NSGA2, CNSGA2 and A 2025 ScienceDirect paper proposes combining filter methods (Information Gain, Random Forest importance, Relief-F) with NSGA-II ScienceDirect — using filter scores to initialize the population intelligently rather than randomly.
