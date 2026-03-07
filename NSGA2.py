@@ -33,7 +33,7 @@ class NSGA2_FS():
         self.n_obj = 2
         self.classifier = classifier
         self.N = population_size
-        self.n_generations = 5
+        self.n_generations = 100
         self.crossover_rate = 0.80
         self.mutation_rate = 0.5
 
@@ -117,7 +117,7 @@ class NSGA2_FS():
             if len(next_gen) + len(front) <= self.N:
                 next_gen.extend(front)
             else:
-                remaining    = self.N - len(next_gen)
+                remaining = self.N - len(next_gen)
                 sorted_front = sorted(front, key=lambda i: combined_population[i].crowding_distance, reverse=True)
                 next_gen.extend(sorted_front[:remaining])
                 break
@@ -182,6 +182,21 @@ class NSGA2_FS():
         for i, idx in enumerate(front):
             individuals[idx].crowding_distance = distances[i]
 
+    def find_knee_point(self, pareto_front):
+        
+        pts = sorted(pareto_front, key=lambda x: x.obj_scores[0])
+        p1 = np.array([pts[0].obj_scores[0],  pts[0].obj_scores[1]]) #Left extreme
+        p2 = np.array([pts[-1].obj_scores[0], pts[-1].obj_scores[1]]) #Right extreme
+        
+        max_dist, knee = 0, None
+        for pt in pts:
+            p = np.array([pt.obj_scores[0], pt.obj_scores[1]])
+            dist = np.abs(np.cross(p2 - p1, p1 - p)) / np.linalg.norm(p2 - p1)
+            if dist > max_dist:
+                max_dist, dist = dist, max_dist
+                knee = pt
+        return knee
+
               
     def fit(self, data):
         self.columns = list(data.columns)
@@ -238,6 +253,9 @@ class NSGA2_FS():
             print(f" {ind.mask_features} {ind.obj_scores[0]:>10} {ind.obj_scores[1]:>10.4f}")
 
         self.pareto_front_ = pareto_front
+        return self.find_knee_point(pareto_front)
+
+    
 
 def main():
     def generate_dataset():
@@ -265,7 +283,9 @@ def main():
     print(df.head())
 
     nsga = NSGA2_FS(classifier = 'decisiontree', population_size = 200)
-    nsga.fit(df)
+    opt_pareto = nsga.fit(df)
+
+    print(f" {opt_pareto.mask_features} {opt_pareto.obj_scores[0]:>10} {opt_pareto.obj_scores[1]:>10.4f}")
 
 
 main()
