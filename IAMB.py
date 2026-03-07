@@ -111,12 +111,12 @@ class IAMB:
         selected_global = [cluster_indices[i] for i in MB]
         return selected_global
 
-    def run(self, clusters, X_train, y_train):
+    def run(self, clusters, X, y):
         selected_from_clusters = []
 
         for cid, indices in clusters.items():
             print(f"\n[IAMB] Cluster {cid} — features {indices}")
-            selected = self.iamb(indices, X_train, y_train)
+            selected = self.iamb(indices, X, y)
             print(f"  → Selected: {selected}")
             selected_from_clusters.extend(selected)
 
@@ -156,11 +156,7 @@ def main():
 
 
     iamb = IAMB(alpha=0.01, n_bins=10)
-    selected = iamb.run(
-        clusters=model.clusters,
-        X_train=X_train,                    
-        y_train=y_train
-    )
+    selected = iamb.run(model.clusters, X_train,y_train)
     selected_feature_names=[feature_cols[i] for i in selected]
     print("\nSelected from clusters:", selected)
     print("Selected feature names:", selected_feature_names)
