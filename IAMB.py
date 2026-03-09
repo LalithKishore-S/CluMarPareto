@@ -156,7 +156,7 @@ def main():
         print(f"  Noise features: {noise_names}")
 
 
-    iamb = IAMB(alpha=0.01, n_bins=10)
+    iamb = IAMB(alpha=0.001, n_bins=10)
     selected = iamb.run(model.clusters, X_train,y_train)
     selected_feature_names=[feature_cols[i] for i in selected]
     print("\nSelected from clusters:", selected)

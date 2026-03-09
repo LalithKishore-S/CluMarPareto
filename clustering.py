@@ -74,15 +74,15 @@ class DBSCAN_Clustering():
         plt.tight_layout()
         plt.show()
 
-    def sanity_check(self):
+    def sanity_check(self, i):
         if self.n_clusters == 0 or self.n_clusters == 1:
-            self.eps -= 0.05
+            self.eps -= 0.05 / 2**i
             self.eps = max(self.eps, 1e-3)
             print("eps decreased to ",self.eps)
             return False 
 
         if self.noise_pct > 60:
-            self.eps += 0.05
+            self.eps += 0.05 / 2**i
             self.eps=min(self.eps,0.99)
             print("eps increased to: ",self.eps)
             return False  
@@ -94,7 +94,7 @@ class DBSCAN_Clustering():
         print("eps calculated through elbow curve: ", self.eps)
         self.plot_kdist(knn_dists)
 
-        for _ in range(max_iter):
+        for i in range(max_iter):
             db = DBSCAN(eps=self.eps, min_samples=self.min_samples, metric="precomputed")
             labels = db.fit_predict(self.D)
 
@@ -114,7 +114,7 @@ class DBSCAN_Clustering():
             print(f"Clusters found : {self.n_clusters}")
             print(f"Noise features : {len(self.noise)}  ({self.noise_pct:.1f}%)")
             
-            if self.sanity_check():
+            if self.sanity_check(i):
                 break
  
            

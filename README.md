@@ -19,3 +19,5 @@ Cluster-Guided Markov Blanket Assisted Multi-Objective Feature Selection Using N
     - So should try NSGA3, Enhanced NSGA2, CNSGA2 and A 2025 ScienceDirect paper proposes combining filter methods (Information Gain, Random Forest importance, Relief-F) with NSGA-II ScienceDirect — using filter scores to initialize the population intelligently rather than randomly.
 
 
+Obseravtion:
+Number of bins is important 
