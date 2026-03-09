@@ -94,6 +94,7 @@ class IAMB:
             print(f"Single feature {cluster_indices[0]}")
             return cluster_indices
 
+        print(cluster_indices)
         X_cluster = X_train[:, cluster_indices]
         local_candidates = list(range(X_cluster.shape[1]))
         MB = []

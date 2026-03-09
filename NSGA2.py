@@ -214,11 +214,11 @@ class NSGA2_FS():
         print(f"Population size : {self.N}")
         print(f"Number of fronts: {len(fronts)}\n")
 
-        for rank, front in enumerate(fronts):
-            print(f"  Rank {rank+1} -- {len(front)} individual(s):")
-            for idx in front:
-                n_feat, acc = objective_scores[idx]
-                print(f"    individual {idx:>3} | features: {n_feat:>2} | accuracy: {acc:.4f}")
+        # for rank, front in enumerate(fronts):
+        #     print(f"  Rank {rank+1} -- {len(front)} individual(s):")
+        #     for idx in front:
+        #         n_feat, acc = objective_scores[idx]
+        #         print(f"    individual {idx:>3} | features: {n_feat:>2} | accuracy: {acc:.4f}")
    
         for front in fronts:
             self.crowded_distance_assignment(front, initial_population)
@@ -226,8 +226,8 @@ class NSGA2_FS():
         parent = initial_population
 
         for gen in range(self.n_generations):
-            print(gen)
-            print("-" * 50)
+            # print(gen)
+            # print("-" * 50)
             children_masks  = self.create_offspring(parent)
             children_scores = [self.fitness_evaluation(m, X, y) for m in children_masks]
             children = [Individual(children_masks[i], children_scores[i]) for i in range(self.N)]
@@ -255,7 +255,6 @@ class NSGA2_FS():
         self.pareto_front_ = pareto_front
         return self.find_knee_point(pareto_front)
 
-    
 
 def main():
     def generate_dataset():
@@ -288,4 +287,5 @@ def main():
     print(f" {opt_pareto.mask_features} {opt_pareto.obj_scores[0]:>10} {opt_pareto.obj_scores[1]:>10.4f}")
 
 
-main()
+if __name__ == "__main__":
+    main()
