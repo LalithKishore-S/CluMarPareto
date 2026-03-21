@@ -12,6 +12,9 @@ class Individual():
         self.crowding_distance = 0.0    
         self.rank = None
 
+    def key(self):
+        return self.mask_features.tobytes()
+
     def dominates(self, b):
         """
         A dominates B if:
@@ -29,12 +32,12 @@ class Individual():
         return no_worse and strictly_better
 
 class NSGA2_FS():
-    def __init__(self, classifier = 'randomforest', population_size = 1000):
+    def __init__(self, classifier = 'randomforest', population_size = 1000, n_generations = 100, crossover_rate = 0.8):
         self.n_obj = 2
         self.classifier = classifier
         self.N = population_size
-        self.n_generations = 100
-        self.crossover_rate = 0.80
+        self.n_generations = n_generations
+        self.crossover_rate = crossover_rate
         self.mutation_rate = 0.5
 
     def generate_populations(self):
@@ -94,6 +97,7 @@ class NSGA2_FS():
         return child
       
     def create_offspring(self, population):
+        seen = {ind.key() for ind in population}
         children_masks = []
         while len(children_masks) < self.N:
             parent_a = self.tournament_select(population)
@@ -101,9 +105,13 @@ class NSGA2_FS():
             child_a, child_b = self.crossover(parent_a, parent_b)
             child_a = self.mutate(child_a)
             child_b = self.mutate(child_b)
-            children_masks.append(child_a)
-            if len(children_masks) < self.N:
-                children_masks.append(child_b)
+            for child in (child_a, child_b):
+                if len(children_masks) >= self.N:
+                    break
+                key = child.tobytes()
+                if key not in seen:          
+                    seen.add(key)
+                    children_masks.append(child)
         return children_masks
 
     
@@ -187,23 +195,24 @@ class NSGA2_FS():
         pts = sorted(pareto_front, key=lambda x: x.obj_scores[0])
         p1 = np.array([pts[0].obj_scores[0],  pts[0].obj_scores[1]]) #Left extreme
         p2 = np.array([pts[-1].obj_scores[0], pts[-1].obj_scores[1]]) #Right extreme
+        if len(pareto_front) == 1:
+            return pts[0]
+        elif len(pareto_front) == 2:
+            return pts[1]
         
-        max_dist, knee = 0, None
+        max_dist, knee = -float('inf'), None
         for pt in pts:
             p = np.array([pt.obj_scores[0], pt.obj_scores[1]])
             dist = np.abs(np.cross(p2 - p1, p1 - p)) / np.linalg.norm(p2 - p1)
             if dist > max_dist:
-                max_dist, dist = dist, max_dist
+                max_dist = dist
                 knee = pt
         return knee
 
               
-    def fit(self, data):
-        self.columns = list(data.columns)
-        self.n_cols = len(self.columns) - 1
+    def fit(self, X, y):
+        self.n_cols = X.shape[1]
         self.mutation_rate = 1 / self.n_cols
-        X = data.iloc[:,:-1].values
-        y = data.iloc[:,-1].values
 
         initial_population = self.generate_populations()
         objective_scores = [self.fitness_evaluation(individual, X, y) for individual in initial_population]
@@ -228,7 +237,9 @@ class NSGA2_FS():
         for gen in range(self.n_generations):
             # print(gen)
             # print("-" * 50)
-            children_masks  = self.create_offspring(parent)
+            children_masks = self.create_offspring(parent)
+            if len(children_masks) == 0:
+                break
             children_scores = [self.fitness_evaluation(m, X, y) for m in children_masks]
             children = [Individual(children_masks[i], children_scores[i]) for i in range(self.N)]
 
