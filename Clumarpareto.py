@@ -1,5 +1,6 @@
 from clustering import DBSCAN_Clustering
 from IAMB import IAMB
+from HITONMB import HITONMB
 from NSGA2 import NSGA2_FS
 import pandas as pd
 import numpy as np

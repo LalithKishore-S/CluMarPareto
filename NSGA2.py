@@ -190,31 +190,48 @@ class NSGA2_FS():
         for i, idx in enumerate(front):
             individuals[idx].crowding_distance = distances[i]
 
-    def find_knee_point(self, pareto_front):
+    # def find_knee_point(self, pareto_front):
         
-        pts = sorted(pareto_front, key=lambda x: x.obj_scores[0])
-        p1 = np.array([pts[0].obj_scores[0],  pts[0].obj_scores[1]]) #Left extreme
-        p2 = np.array([pts[-1].obj_scores[0], pts[-1].obj_scores[1]]) #Right extreme
-        norm = np.linalg.norm(p2 - p1)
-        if norm < 1e-12:
-            return pts[0]
-        if len(pareto_front) == 1:
-            return pts[0]
-        elif len(pareto_front) == 2:
-            return max(pts, key=lambda x: x.obj_scores[1])
+    #     pts = sorted(pareto_front, key=lambda x: x.obj_scores[0])
+    #     p1 = np.array([pts[0].obj_scores[0],  pts[0].obj_scores[1]]) #Left extreme
+    #     p2 = np.array([pts[-1].obj_scores[0], pts[-1].obj_scores[1]]) #Right extreme
+    #     norm = np.linalg.norm(p2 - p1)
+    #     if norm < 1e-12:
+    #         return pts[0]
+    #     if len(pareto_front) == 1:
+    #         return pts[0]
+    #     elif len(pareto_front) == 2:
+    #         return max(pts, key=lambda x: x.obj_scores[1])
         
-        max_dist, knee = -float('inf'), None
-        for pt in pts:
-            p = np.array([pt.obj_scores[0], pt.obj_scores[1]])
-            dist = np.abs(np.cross(p2 - p1, p1 - p)) / norm
-            if dist > max_dist:
-                max_dist = dist
-                knee = pt
-        return knee
+    #     max_dist, knee = -float('inf'), None
+    #     for pt in pts:
+    #         p = np.array([pt.obj_scores[0], pt.obj_scores[1]])
+    #         dist = np.abs(np.cross(p2 - p1, p1 - p)) / norm
+    #         if dist > max_dist:
+    #             max_dist = dist
+    #             knee = pt
+    #     return knee
 
+
+    def find_knee_point(self, pareto_front):
+        if len(pareto_front) == 1:
+            return pareto_front[0]
+        if len(pareto_front) == 2:
+            return max(pareto_front, key=lambda x: x.obj_scores[1] - (x.obj_scores[0] / self.n_samples_))
+
+        best, best_score = None, -np.inf
+        for pt in pareto_front:
+            n_selected = pt.obj_scores[0]
+            acc        = pt.obj_scores[1]
+            adjusted   = acc - (n_selected / self.n_samples_)
+            if adjusted > best_score:
+                best_score = adjusted
+                best       = pt
+        return best
               
     def fit(self, X, y):
         self.n_cols = X.shape[1]
+        self.n_samples_ = X.shape[0]
         self.mutation_rate = 1 / self.n_cols
 
         initial_population = self.generate_populations()
