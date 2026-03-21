@@ -7,10 +7,10 @@ from scipy.stats import spearmanr
 
 
 class DBSCAN_Clustering():
-    def __init__(self):
+    def __init__(self, min_samples = 2, use_spearman = False):
         self.D = None
         self.n_features=0
-        self.min_samples = 2
+        self.min_samples = min_samples
         self.eps = 0
         self.n_clusters=0
         self.noise_pct=0
