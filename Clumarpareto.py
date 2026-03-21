@@ -27,25 +27,11 @@ class CluMarPareto:
     def __init__(
         self,
         classifier:      str   = "decisiontree",
-        population_size: int   = 100,
-        n_generations:   int   = 100,
         crossover_rate:  float = 0.80,
-        base_alpha:      float = 0.01,
-        n_bins:          int   = 10,
-        min_samples:     int   = 2,
-        use_spearman:    bool  = False,
-        test_size:       float = 0.20,
         verbose:         bool  = True,
     ):
         self.classifier      = classifier
-        self.population_size = population_size
-        self.n_generations   = n_generations
         self.crossover_rate  = crossover_rate
-        self.base_alpha      = base_alpha
-        self.n_bins          = n_bins
-        self.min_samples     = min_samples
-        self.use_spearman    = use_spearman
-        self.test_size       = test_size
         self.verbose         = verbose
  
         self.feature_names_       = None   # all feature names (excl. target)
@@ -69,10 +55,7 @@ class CluMarPareto:
             print("STAGE 1 — DBSCAN Clustering")
             print("=" * 60)
  
-        self.dbscan_ = DBSCAN_Clustering(
-            min_samples=self.min_samples,
-            use_spearman=self.use_spearman,
-        )
+        self.dbscan_ = DBSCAN_Clustering()
         self.dbscan_.build_distance_matrix(X)
         self.dbscan_.cluster_features(feature_names=self.feature_names_)
  
@@ -82,12 +65,8 @@ class CluMarPareto:
             print("STAGE 2 — IAMB within clusters")
             print("=" * 60)
  
-        self.iamb_ = IAMB(alpha=self.base_alpha, n_bins=self.n_bins)
-        self.selected_indices_ = self.iamb_.run(
-            clusters=self.dbscan_.clusters,
-            X=X,
-            y=y
-        )
+        self.iamb_ = IAMB()
+        self.selected_indices_ = self.iamb_.run(clusters=self.dbscan_.clusters, X=X, y=y)
         self.selected_indices_ += self.dbscan_.noise
         self.selected_features_ = [self.feature_names_[i] for i in self.selected_indices_]
  
@@ -106,6 +85,9 @@ class CluMarPareto:
  
         
         X_reduced = X[:, self.selected_indices_]
+        self.population_size = min(200, max(50, 10 * X_reduced.shape[1]))
+        self.n_generations = min(200, max(50, self.population_size // 2))
+
  
         self.nsga2_ = NSGA2_FS(
             classifier=self.classifier,

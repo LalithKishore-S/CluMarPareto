@@ -6,9 +6,9 @@ from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
 
 class IAMB:
-    def __init__(self, alpha=0.01, n_bins=10):
-        self.alpha = alpha
-        self.n_bins = n_bins
+    def __init__(self):
+        self.alpha = None
+        self.n_bins = None
            
     def discretize(self, Z):
         if Z.ndim == 1:
@@ -113,6 +113,8 @@ class IAMB:
         return selected_global
 
     def run(self, clusters, X, y):
+        self.alpha = 0.05 / X.shape[1]
+        self.n_bins = max(5, min(20, round(X.shape[0] ** (1/3))))
         selected_from_clusters = []
 
         for cid, indices in clusters.items():
