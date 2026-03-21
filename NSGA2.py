@@ -201,7 +201,7 @@ class NSGA2_FS():
         if len(pareto_front) == 1:
             return pts[0]
         elif len(pareto_front) == 2:
-            return max(max(pts, key=lambda x: x.obj_scores[1]))
+            return max(pts, key=lambda x: x.obj_scores[1])
         
         max_dist, knee = -float('inf'), None
         for pt in pts:

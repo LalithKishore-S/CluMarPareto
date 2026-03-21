@@ -29,7 +29,7 @@ class DBSCAN_Clustering():
         np.fill_diagonal(self.D, 0.0)
         self.D = np.clip(self.D, 0.0, 1.0)
         self.n_features=self.D.shape[0]
-        self.min_samples = max(2, int(np.log10(self.n_features)))
+        self.min_samples = max(2, int(np.log(self.n_features)))
 
     def knn_distances(self):
         n = self.D.shape[0]

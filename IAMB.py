@@ -71,7 +71,7 @@ class IAMB:
 
     def backward_phase(self, target, X_cluster, MB):
         to_remove = []
-        for feature in list(MB):
+        for feature in reversed(list(MB)):
             rest = [m for m in MB if m != feature]
             x = X_cluster[:, feature]
 
