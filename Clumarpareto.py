@@ -57,7 +57,7 @@ class CluMarPareto:
             print("STAGE 1 — DBSCAN Clustering")
             print("=" * 60)
  
-        self.dbscan_ = XDBSCAN_Clustering()
+        self.dbscan_ = DBSCAN_Clustering()
         self.dbscan_.build_distance_matrix(X)
         self.dbscan_.cluster_features(feature_names=self.feature_names_)
  

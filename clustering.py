@@ -26,7 +26,7 @@ class DBSCAN_Clustering():
             corr_matrix = np.corrcoef(data.T)
 
         corr_matrix = np.nan_to_num(corr_matrix, nan=0.0)
-        corr_matrix = np.abs(corr_matrix)
+        corr_matrix = np.square(corr_matrix)
         self.D = np.sqrt(1.0 - corr_matrix)
         np.fill_diagonal(self.D, 0.0)
         self.n_features=self.D.shape[0]
