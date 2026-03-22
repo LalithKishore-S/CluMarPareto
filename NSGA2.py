@@ -40,14 +40,51 @@ class NSGA2_FS():
         self.crossover_rate = crossover_rate
         self.mutation_rate = 0.5
 
-    def generate_populations(self):
-        population = []
-        for _ in range(self.N):
+    # def generate_populations(self):
+    #     population = []
+    #     for _ in range(self.N):
+    #         while True:
+    #             individual = np.random.randint(0, 2, size = self.n_cols).astype(bool)
+    #             if individual.sum() >= 1:
+    #                 break
+    #         population.append(individual)
+    #     return np.array(population)
+    
+    def generate_populations(self, warm_start_indices=None):
+        seen, population = set(), []
+
+        # seed 30% with IAMB solution + perturbations
+        if warm_start_indices is not None:
+            n_warm = max(1, int(0.3 * self.N))
+            base   = np.zeros(self.n_cols, dtype=bool)
+            base[warm_start_indices] = True
+            attempts = 0
+
+            while len(population) < n_warm and attempts < n_warm * 20:
+                # small perturbation — flip ~10% of bits
+                child      = base.copy()
+                flip       = np.random.rand(self.n_cols) < 0.1
+                child[flip] ^= True
+                if child.sum() == 0:
+                    child[np.random.randint(self.n_cols)] = True
+                key = child.tobytes()
+                if key not in seen:
+                    seen.add(key)
+                    population.append(child)
+                attempts += 1
+
+            key = base.tobytes()
+            if key not in seen:
+                seen.add(key)
+                population.append(base)
+
+        while len(population) < self.N:
             while True:
                 individual = np.random.randint(0, 2, size = self.n_cols).astype(bool)
                 if individual.sum() >= 1:
                     break
             population.append(individual)
+
         return np.array(population)
     
     def fitness_evaluation(self, individual, X, y):
@@ -229,12 +266,12 @@ class NSGA2_FS():
                 best       = pt
         return best
               
-    def fit(self, X, y):
+    def fit(self, X, y, warm_start_indices = None):
         self.n_cols = X.shape[1]
         self.n_samples_ = X.shape[0]
         self.mutation_rate = 1 / self.n_cols
 
-        initial_population = self.generate_populations()
+        initial_population = self.generate_populations(warm_start_indices = warm_start_indices)
         objective_scores = [self.fitness_evaluation(individual, X, y) for individual in initial_population]
         initial_population = [Individual(initial_population[i], objective_scores[i]) for i in range(initial_population.shape[0])]
         fronts = self.non_dominated_sorting(initial_population)

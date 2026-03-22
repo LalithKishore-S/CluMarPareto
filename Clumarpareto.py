@@ -88,6 +88,7 @@ class CluMarPareto:
         X_reduced = X[:, self.selected_indices_]
         self.population_size = min(200, max(50, 10 * X_reduced.shape[1]))
         self.n_generations = min(200, max(50, self.population_size // 2))
+        warm_start_local = list(range(len(self.selected_indices_)))
 
  
         self.nsga2_ = NSGA2_FS(
@@ -96,7 +97,7 @@ class CluMarPareto:
             n_generations=self.n_generations,
             crossover_rate=self.crossover_rate,
         )
-        self.nsga2_.fit(X=X_reduced, y=y)
+        self.nsga2_.fit(X=X_reduced, y=y, warm_start_indices = warm_start_local)
         self.pareto_front_ = self.nsga2_.pareto_front_
         self.knee_solution_ = self.nsga2_.find_knee_point(self.pareto_front_)
  
@@ -105,16 +106,33 @@ class CluMarPareto:
         knee_original_indices = [self.selected_indices_[i] for i in knee_local_indices]
         knee_feature_names    = [self.feature_names_[i] for i in knee_original_indices]
  
-        if self.verbose:
-            print("\n" + "=" * 60)
-            print("RESULT — Knee-point solution")
-            print("=" * 60)
-            print(f"  Features selected : {self.knee_solution_.obj_scores[0]}")
-            print(f"  Accuracy          : {self.knee_solution_.obj_scores[1]:.4f}")
-            print(f"  Feature names     : {knee_feature_names}")
+        # if self.verbose:
+        #     print("\n" + "=" * 60)
+        #     print("RESULT — Knee-point solution")
+        #     print("=" * 60)
+        #     print(f"  Features selected : {self.knee_solution_.obj_scores[0]}")
+        #     print(f"  Accuracy          : {self.knee_solution_.obj_scores[1]:.4f}")
+        #     print(f"  Feature names     : {knee_feature_names}")
  
         self.knee_original_indices_ = knee_original_indices
         self.knee_feature_names_    = knee_feature_names
+
+        if self.verbose:
+            print("\n" + "=" * 60)
+            print("SUMMARY")
+            print("=" * 60)
+            print(f"  Original features  ({len(self.feature_names_)}):")
+            print(f"    {self.feature_names_}")
+            print(f"\n  After IAMB         ({len(self.selected_features_)}):")
+            print(f"    {self.selected_features_}")
+            print(f"\n  After NSGA2 / Knee ({len(self.knee_feature_names_)}):")
+            print(f"    {self.knee_feature_names_}")
+            print(f"\n  Accuracy (CV)      : {self.knee_solution_.obj_scores[1]:.4f}")
+            print(f"  Features reduced   : {len(self.feature_names_)} → "
+                f"{len(self.selected_features_)} → "
+                f"{len(self.knee_feature_names_)}")
+            print(f"  Total reduction    : "
+                f"{(1 - len(self.knee_feature_names_) / len(self.feature_names_)) * 100:.1f}%")
         return self
  
     def transform(self, X: np.ndarray) -> np.ndarray:
