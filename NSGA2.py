@@ -250,21 +250,52 @@ class NSGA2_FS():
     #     return knee
 
 
+    # def find_knee_point(self, pareto_front):
+    #     if len(pareto_front) == 1:
+    #         return pareto_front[0]
+    #     if len(pareto_front) == 2:
+    #         return max(pareto_front, key=lambda x: x.obj_scores[1] - (x.obj_scores[0] / self.n_samples_))
+
+    #     best, best_score = None, -np.inf
+    #     for pt in pareto_front:
+    #         n_selected = pt.obj_scores[0]
+    #         acc        = pt.obj_scores[1]
+    #         adjusted   = acc - (n_selected / self.n_samples_)
+    #         if adjusted > best_score:
+    #             best_score = adjusted
+    #             best       = pt
+    #     return best
+
     def find_knee_point(self, pareto_front):
         if len(pareto_front) == 1:
             return pareto_front[0]
-        if len(pareto_front) == 2:
-            return max(pareto_front, key=lambda x: x.obj_scores[1] - (x.obj_scores[0] / self.n_samples_))
 
-        best, best_score = None, -np.inf
-        for pt in pareto_front:
-            n_selected = pt.obj_scores[0]
-            acc        = pt.obj_scores[1]
-            adjusted   = acc - (n_selected / self.n_samples_)
-            if adjusted > best_score:
-                best_score = adjusted
-                best       = pt
-        return best
+        pts       = pareto_front
+        feat_vals = np.array([p.obj_scores[0] for p in pts], dtype=float)
+        acc_vals  = np.array([p.obj_scores[1] for p in pts], dtype=float)
+
+        feat_range = feat_vals.max() - feat_vals.min()
+        acc_range  = acc_vals.max()  - acc_vals.min()
+
+        # smaller-the-better for features
+        feat_norm = (feat_vals.max() - feat_vals) / (feat_range + 1e-12)
+        # larger-the-better for accuracy
+        acc_norm  = (acc_vals - acc_vals.min())   / (acc_range  + 1e-12)
+
+        ref = np.array([feat_norm.max(), acc_norm.max()])
+        norm_matrix = np.column_stack([feat_norm, acc_norm])  # shape (n_pts, 2)
+        delta       = np.abs(ref - norm_matrix)               # shape (n_pts, 2)
+        delta_min = delta.min()
+        delta_max = delta.max()
+
+        grc = 1/ len(pareto_front) * (delta_min + delta_max) / (delta + delta_max + 1e-12)
+        grc_total = grc.sum(axis=1)
+        best_idx  = int(np.argmax(grc_total))
+
+        if np.all(grc_total == grc_total[0]):
+            best_idx = int(np.argmax(acc_vals))
+
+        return pts[best_idx]
               
     def fit(self, X, y, warm_start_indices = None):
         self.n_cols = X.shape[1]
