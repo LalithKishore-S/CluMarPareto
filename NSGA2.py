@@ -40,52 +40,52 @@ class NSGA2_FS():
         self.crossover_rate = crossover_rate
         self.mutation_rate = 0.5
 
-    # def generate_populations(self):
-    #     population = []
-    #     for _ in range(self.N):
-    #         while True:
-    #             individual = np.random.randint(0, 2, size = self.n_cols).astype(bool)
-    #             if individual.sum() >= 1:
-    #                 break
-    #         population.append(individual)
-    #     return np.array(population)
-    
-    def generate_populations(self, warm_start_indices=None):
-        seen, population = set(), []
-
-        # seed 30% with IAMB solution + perturbations
-        if warm_start_indices is not None:
-            n_warm = max(1, int(0.3 * self.N))
-            base   = np.zeros(self.n_cols, dtype=bool)
-            base[warm_start_indices] = True
-            attempts = 0
-
-            while len(population) < n_warm and attempts < n_warm * 20:
-                # small perturbation — flip ~10% of bits
-                child      = base.copy()
-                flip       = np.random.rand(self.n_cols) < 0.1
-                child[flip] ^= True
-                if child.sum() == 0:
-                    child[np.random.randint(self.n_cols)] = True
-                key = child.tobytes()
-                if key not in seen:
-                    seen.add(key)
-                    population.append(child)
-                attempts += 1
-
-            key = base.tobytes()
-            if key not in seen:
-                seen.add(key)
-                population.append(base)
-
-        while len(population) < self.N:
+    def generate_populations(self, warm_start_indices = None):
+        population = []
+        for _ in range(self.N):
             while True:
                 individual = np.random.randint(0, 2, size = self.n_cols).astype(bool)
                 if individual.sum() >= 1:
                     break
             population.append(individual)
-
         return np.array(population)
+    
+    # def generate_populations(self, warm_start_indices=None):
+    #     seen, population = set(), []
+
+    #     # seed 30% with IAMB solution + perturbations
+    #     if warm_start_indices is not None:
+    #         n_warm = max(1, int(0.3 * self.N))
+    #         base   = np.zeros(self.n_cols, dtype=bool)
+    #         base[warm_start_indices] = True
+    #         attempts = 0
+
+    #         while len(population) < n_warm and attempts < n_warm * 20:
+    #             # small perturbation — flip ~10% of bits
+    #             child      = base.copy()
+    #             flip       = np.random.rand(self.n_cols) < 0.1
+    #             child[flip] ^= True
+    #             if child.sum() == 0:
+    #                 child[np.random.randint(self.n_cols)] = True
+    #             key = child.tobytes()
+    #             if key not in seen:
+    #                 seen.add(key)
+    #                 population.append(child)
+    #             attempts += 1
+
+    #         key = base.tobytes()
+    #         if key not in seen:
+    #             seen.add(key)
+    #             population.append(base)
+
+    #     while len(population) < self.N:
+    #         while True:
+    #             individual = np.random.randint(0, 2, size = self.n_cols).astype(bool)
+    #             if individual.sum() >= 1:
+    #                 break
+    #         population.append(individual)
+
+    #     return np.array(population)
     
     def fitness_evaluation(self, individual, X, y):
         n_features_selected = int(individual.sum())
@@ -136,7 +136,8 @@ class NSGA2_FS():
     def create_offspring(self, population):
         seen = {ind.key() for ind in population}
         children_masks = []
-        while len(children_masks) < self.N:
+        attempts = 0
+        while len(children_masks) < self.N and attempts <= 2 * self.N:
             parent_a = self.tournament_select(population)
             parent_b = self.tournament_select(population)
             child_a, child_b = self.crossover(parent_a, parent_b)
@@ -149,6 +150,8 @@ class NSGA2_FS():
                 if key not in seen:          
                     seen.add(key)
                     children_masks.append(child)
+            attempts +=1 
+        # print(len(children_masks))
         return children_masks
 
     
@@ -302,6 +305,11 @@ class NSGA2_FS():
         self.n_samples_ = X.shape[0]
         self.mutation_rate = 1 / self.n_cols
 
+        max_possible = min(2**self.n_cols - 1, self.N)
+        if max_possible < self.N:
+            print(f"  Population size capped: {self.N} → {max_possible} "
+                f"(search space = 2^{self.n_cols}-1 = {max_possible})")
+            self.N = max_possible
         initial_population = self.generate_populations(warm_start_indices = warm_start_indices)
         objective_scores = [self.fitness_evaluation(individual, X, y) for individual in initial_population]
         initial_population = [Individual(initial_population[i], objective_scores[i]) for i in range(initial_population.shape[0])]
@@ -329,7 +337,8 @@ class NSGA2_FS():
             if len(children_masks) == 0:
                 break
             children_scores = [self.fitness_evaluation(m, X, y) for m in children_masks]
-            children = [Individual(children_masks[i], children_scores[i]) for i in range(self.N)]
+            n_children = len(children_scores)
+            children = [Individual(children_masks[i], children_scores[i]) for i in range(n_children)]
 
             combined = parent + children
             parent = self.select_next_generation(combined)

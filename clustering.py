@@ -25,18 +25,20 @@ class DBSCAN_Clustering():
         else:
             corr_matrix = np.corrcoef(data.T)
 
-        self.D = 1.0 - np.abs(corr_matrix)
+        corr_matrix = np.nan_to_num(corr_matrix, nan=0.0)
+        corr_matrix = np.abs(corr_matrix)
+        self.D = np.sqrt(1.0 - corr_matrix)
         np.fill_diagonal(self.D, 0.0)
-        self.D = np.clip(self.D, 0.0, 1.0)
         self.n_features=self.D.shape[0]
         self.min_samples = max(2, int(np.log(self.n_features)))
+        self.elbow_k = self._elbow_k = max(3, int(np.ceil(np.sqrt(self.n_features))))
 
     def knn_distances(self):
         n = self.D.shape[0]
         knn_dists = np.zeros(n)
         for i in range(n):
             row = np.sort(self.D[i])  
-            knn_dists[i] = row[min(self.min_samples, n - 1)]
+            knn_dists[i] = row[min(self.elbow_k, n - 1)]
         return np.sort(knn_dists)
     
     def detect_elbow(self, sorted_dists): 
@@ -84,7 +86,7 @@ class DBSCAN_Clustering():
 
         if self.noise_pct > 60:
             self.eps += 0.05 / 2**i
-            self.eps=min(self.eps,0.99)
+            self.eps=min(self.eps, 0.99)
             print("eps increased to: ",self.eps)
             return False  
         return True

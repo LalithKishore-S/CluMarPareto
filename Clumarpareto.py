@@ -1,4 +1,5 @@
 from clustering import DBSCAN_Clustering
+from X_DBSCAN import XDBSCAN_Clustering
 from IAMB import IAMB
 from HITONMB import HITONMB
 from NSGA2 import NSGA2_FS
@@ -56,7 +57,7 @@ class CluMarPareto:
             print("STAGE 1 — DBSCAN Clustering")
             print("=" * 60)
  
-        self.dbscan_ = DBSCAN_Clustering()
+        self.dbscan_ = XDBSCAN_Clustering()
         self.dbscan_.build_distance_matrix(X)
         self.dbscan_.cluster_features(feature_names=self.feature_names_)
  
@@ -68,7 +69,9 @@ class CluMarPareto:
  
         self.iamb_ = IAMB()
         self.selected_indices_ = self.iamb_.run(clusters=self.dbscan_.clusters, X=X, y=y)
-        self.selected_indices_ += self.dbscan_.noise
+        # informative_noise = self.dbscan_.filter_noise(X, y)
+        informative_noise = self.dbscan_.noise
+        self.selected_indices_ += informative_noise
         self.selected_features_ = [self.feature_names_[i] for i in self.selected_indices_]
  
         if self.verbose:
