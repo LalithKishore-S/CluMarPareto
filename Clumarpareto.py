@@ -64,7 +64,7 @@ class CluMarPareto:
 
         if self.verbose:
             print("\n" + "=" * 60)
-            print("STAGE 2 — IAMB within clusters")
+            print("STAGE 2 — Inter IAMB within clusters")
             print("=" * 60)
  
         self.iamb_ = IAMB()

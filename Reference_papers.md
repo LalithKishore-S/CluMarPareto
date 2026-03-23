@@ -7,4 +7,7 @@
 ## DBSCAN - distance metric
 - https://arxiv.org/pdf/1908.06029
 
+## IAMB algorithm
+- https://cdn.aaai.org/FLAIRS/2003/Flairs03-073.pdf
+
 
