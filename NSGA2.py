@@ -371,8 +371,10 @@ class NSGA2_FS():
         delta_min = delta.min()
         delta_max = delta.max()
 
+        w_features = 0.4
+        w_accuracy = 0.6
         grc = 1/ len(pareto_front) * (delta_min + delta_max) / (delta + delta_max + 1e-12)
-        grc_total = grc.sum(axis=1)
+        grc_total = w_features * grc[:,0] + w_accuracy * grc[:,1]
         best_idx  = int(np.argmax(grc_total))
 
         if np.all(grc_total == grc_total[0]):
@@ -412,6 +414,11 @@ class NSGA2_FS():
 
         parent = initial_population
 
+        best_acc_history = []
+        pareto_size_history = []
+        patience = 10
+        tol = 1e-4
+
         for gen in range(self.n_generations):
             # print(gen)
             # print("-" * 50)
@@ -432,8 +439,17 @@ class NSGA2_FS():
 
             parent = next_parent
 
+            pareto = [ind for ind in parent if ind.rank == 0]
+            if len(pareto) == 0:
+                print("⚠️ Warning: No Pareto front, using full population")
+                pareto = parent
+            pareto_size = len(pareto)
+            best_acc = max(ind.obj_scores[1] for ind in pareto)
+
+            best_acc_history.append(best_acc)
+            pareto_size_history.append(pareto_size)
+
             if (gen + 1) % 10 == 0:
-                pareto = [ind for ind in parent if ind.rank == 0]
 
                 if len(pareto) == 0:
                     print("⚠️ Warning: No Pareto front, using full population")
@@ -444,6 +460,17 @@ class NSGA2_FS():
                 max_feats = max(ind.obj_scores[0] for ind in pareto)
                 print(f"  Gen {gen+1:>3} | Pareto size: {len(pareto):>3} | "
                       f"Best acc: {best_acc:.4f} | Min features: {min_feats} | Max features: {max_feats}")
+                
+            if len(best_acc_history) >= patience:
+                acc_recent = best_acc_history[-patience:]
+                size_recent = pareto_size_history[-patience:]
+
+                acc_stable = max(acc_recent) - min(acc_recent) < tol
+                size_stable = max(size_recent) - min(size_recent) <= 2
+
+                if acc_stable and size_stable:
+                    print(f"Converged at generation {gen}")
+                    break
         
         fronts = self.non_dominated_sorting(parent)
         pareto_front = [parent[i] for i in fronts[0]]
