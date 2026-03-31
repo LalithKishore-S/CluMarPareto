@@ -183,7 +183,7 @@ class IAMB:
             retained     = [f for f, v in noise_mi.items() if v >= median_noise]
             print(f"\n[Noise]  retained {len(retained)}/{len(noise_indices)} "
                   f"(MI >= {median_noise:.4f}): {retained}")
-            #selected.extend(retained)
+            selected.extend(retained)
             
         print(noise_indices)
 

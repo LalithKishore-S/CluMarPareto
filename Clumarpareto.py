@@ -1,6 +1,6 @@
 from clustering import DBSCAN_Clustering
 from X_DBSCAN import XDBSCAN_Clustering
-from IAMB import IAMB
+from IAMB_1 import IAMB
 from HITONMB import HITONMB
 from NSGA2 import NSGA2_FS
 import pandas as pd
@@ -68,10 +68,10 @@ class CluMarPareto:
             print("=" * 60)
  
         self.iamb_ = IAMB()
-        self.selected_indices_ = self.iamb_.run(clusters=self.dbscan_.clusters, X=X, y=y)
+        self.selected_indices_ = self.iamb_.run(clusters=self.dbscan_.clusters, noise_indices=self.dbscan_.noise, X=X, y=y, context_cap=X.shape[1]//2)
         # informative_noise = self.dbscan_.filter_noise(X, y)
-        informative_noise = self.dbscan_.noise
-        self.selected_indices_ += informative_noise
+        # informative_noise = self.dbscan_.noise
+        # self.selected_indices_ += informative_noise
         self.selected_features_ = [self.feature_names_[i] for i in self.selected_indices_]
  
         if self.verbose:
