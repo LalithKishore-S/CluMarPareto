@@ -1,9 +1,12 @@
 import pandas as pd
 import numpy as np
 from sklearn.datasets import make_classification
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import cross_val_score
+from sklearn.feature_selection import mutual_info_classif
+
+
 
 class Individual():
     def __init__(self, mask, obj_scores):
@@ -32,62 +35,111 @@ class Individual():
         return no_worse and strictly_better
 
 class NSGA2_FS():
-    def __init__(self, classifier = 'randomforest', population_size = 1000, n_generations = 100, crossover_rate = 0.8):
+    def __init__(self, classifier = 'randomforest', population_size = 200, n_generations = 100, crossover_rate = 0.8):
         self.n_obj = 2
         self.classifier = classifier
         self.N = population_size
         self.n_generations = n_generations
         self.crossover_rate = crossover_rate
         self.mutation_rate = 0.5
+        self.cache = {}
 
-    def generate_populations(self, warm_start_indices = None):
-        population = []
-        for _ in range(self.N):
-            while True:
-                individual = np.random.randint(0, 2, size = self.n_cols).astype(bool)
-                if individual.sum() >= 1:
-                    break
-            population.append(individual)
-        return np.array(population)
-    
-    # def generate_populations(self, warm_start_indices=None):
-    #     seen, population = set(), []
-
-    #     # seed 30% with IAMB solution + perturbations
-    #     if warm_start_indices is not None:
-    #         n_warm = max(1, int(0.3 * self.N))
-    #         base   = np.zeros(self.n_cols, dtype=bool)
-    #         base[warm_start_indices] = True
-    #         attempts = 0
-
-    #         while len(population) < n_warm and attempts < n_warm * 20:
-    #             # small perturbation — flip ~10% of bits
-    #             child      = base.copy()
-    #             flip       = np.random.rand(self.n_cols) < 0.1
-    #             child[flip] ^= True
-    #             if child.sum() == 0:
-    #                 child[np.random.randint(self.n_cols)] = True
-    #             key = child.tobytes()
-    #             if key not in seen:
-    #                 seen.add(key)
-    #                 population.append(child)
-    #             attempts += 1
-
-    #         key = base.tobytes()
-    #         if key not in seen:
-    #             seen.add(key)
-    #             population.append(base)
-
-    #     while len(population) < self.N:
+    # def generate_populations(self, warm_start_indices = None):
+    #     population = []
+    #     for _ in range(self.N):
     #         while True:
     #             individual = np.random.randint(0, 2, size = self.n_cols).astype(bool)
     #             if individual.sum() >= 1:
     #                 break
     #         population.append(individual)
-
     #     return np.array(population)
     
+    def generate_populations(self, warm_start_indices=None):
+        seen, population = set(), []
+
+        # ---- STEP 1: MI-based base solution ----
+        top_k = max(1, int(0.3 * self.n_cols))
+        mi_top = np.argsort(self.mi_scores)[-top_k:]
+
+        mi_base = np.zeros(self.n_cols, dtype=bool)
+        mi_base[mi_top] = True
+
+        # ---- STEP 2: IAMB base (if available) ----
+        if warm_start_indices is not None:
+            iamb_base = np.zeros(self.n_cols, dtype=bool)
+            iamb_base[warm_start_indices] = True
+        else:
+            iamb_base = None
+
+        # ---- STEP 3: Seed population (40%) ----
+        n_seed = max(1, int(0.4 * self.N))
+
+        base_candidates = [mi_base]
+        if iamb_base is not None:
+            base_candidates.append(iamb_base)
+
+        attempts = 0
+        while len(population) < n_seed and attempts < n_seed * 30:
+            base = base_candidates[np.random.randint(len(base_candidates))]
+
+            child = base.copy()
+
+            # perturb ~10% bits
+            flip = np.random.rand(self.n_cols) < 0.2
+            child[flip] ^= True
+
+            # ensure non-empty
+            if child.sum() == 0:
+                child[np.argmax(self.mi_scores)] = True
+
+            key = child.tobytes()
+            if key not in seen:
+                seen.add(key)
+                population.append(child)
+
+            attempts += 1
+
+        # ---- STEP 4: Add pure MI base ----
+        key = mi_base.tobytes()
+        if key not in seen:
+            seen.add(key)
+            population.append(mi_base)
+
+        # ---- STEP 5: Fill remaining (diverse random but biased) ----
+        while len(population) < self.N:
+            prob = self.mi_scores  # bias toward important features
+            individual = np.random.rand(self.n_cols) < prob
+
+            if individual.sum() == 0:
+                individual[np.argmax(self.mi_scores)] = True
+
+            key = individual.tobytes()
+            if key not in seen:
+                seen.add(key)
+                population.append(individual)
+
+        return np.array(population)
+    
+    def compute_redundancy(self, X_selected):
+        if X_selected.shape[1] <= 1:
+            return 0
+        corr = np.corrcoef(X_selected.T)
+        upper = corr[np.triu_indices_from(corr, k=1)]
+        return np.mean(np.abs(upper))
+    
     def fitness_evaluation(self, individual, X, y):
+        key = individual.tobytes()
+
+        if key in self.cache:
+            return self.cache[key]
+        
+        selected_indices = np.where(individual)[0]
+
+        if len(selected_indices) == 0:
+            relevance = 0
+        else:
+            relevance = np.mean(self.mi_scores[selected_indices])
+        
         n_features_selected = int(individual.sum())
         X_masked = X[:, individual]
 
@@ -101,10 +153,22 @@ class NSGA2_FS():
             model = DecisionTreeClassifier(max_depth=5, random_state=42)  # shallow = sensitive to noise
             acc_score = cross_val_score(model, X_masked, y, cv=5, n_jobs=-1).mean()
 
-        if acc_score <= 0.5:
-            acc_score = 0
+        else:
+            model = ExtraTreesClassifier(n_estimators=30, max_depth=10, bootstrap=False,n_jobs=-1, random_state=42)
+            acc_score = cross_val_score(model, X_masked, y, cv=3, n_jobs=-1).mean()
 
-        return (n_features_selected, acc_score)
+        # if acc_score <= 0.5:
+        #     acc_score = 0
+
+        redundancy = self.compute_redundancy(X[:, individual])
+        penalty = 0.01 * (n_features_selected / self.n_cols)
+
+        adjusted_acc = acc_score - penalty
+        adjusted_acc -= 0.01 * redundancy   # combine both
+        adjusted_acc  += 0.05 * relevance
+
+        self.cache[key] = (n_features_selected, adjusted_acc)
+        return self.cache[key]
     
     def tournament_select(self, population):
         i, j = np.random.choice(len(population), size=2, replace=False)
@@ -125,12 +189,28 @@ class NSGA2_FS():
         child_b = np.concatenate([parent_b.mask_features[:point], parent_a.mask_features[point:]])
         return child_a, child_b
 
+    # def mutate(self, chromosome):
+    #     mask  = np.random.rand(self.n_cols) < self.mutation_rate
+    #     child = chromosome.copy()
+    #     child[mask] = ~child[mask]
+    #     if child.sum() == 0:                          
+    #         child[np.random.randint(self.n_cols)] = True
+    #     return child
     def mutate(self, chromosome):
-        mask  = np.random.rand(self.n_cols) < self.mutation_rate
         child = chromosome.copy()
-        child[mask] = ~child[mask]
-        if child.sum() == 0:                          
-            child[np.random.randint(self.n_cols)] = True
+
+        for i in range(self.n_cols):
+            if np.random.rand() < self.mutation_rate:
+                if child[i] == 0:
+                    if np.random.rand() < self.mi_scores[i]:
+                        child[i] = True
+                else:
+                    if np.random.rand() > self.mi_scores[i]:
+                        child[i] = False
+
+        if child.sum() == 0:
+            child[np.argmax(self.mi_scores)] = True
+
         return child
       
     def create_offspring(self, population):
@@ -304,6 +384,8 @@ class NSGA2_FS():
         self.n_cols = X.shape[1]
         self.n_samples_ = X.shape[0]
         self.mutation_rate = 1 / self.n_cols
+        self.mi_scores = mutual_info_classif(X, y)
+        self.mi_scores = self.mi_scores / (self.mi_scores.max() + 1e-12)
 
         max_possible = min(2**self.n_cols - 1, self.N)
         if max_possible < self.N:
@@ -341,14 +423,27 @@ class NSGA2_FS():
             children = [Individual(children_masks[i], children_scores[i]) for i in range(n_children)]
 
             combined = parent + children
-            parent = self.select_next_generation(combined)
+            next_parent = self.select_next_generation(combined)
+
+            # --- STEP 4: ELITISM (correct placement) ---
+            elites = sorted(parent, key=lambda x: (x.rank, -x.crowding_distance))[:5]
+
+            next_parent[:len(elites)] = elites
+
+            parent = next_parent
 
             if (gen + 1) % 10 == 0:
-                pareto    = [ind for ind in parent if ind.rank == 0]
-                best_acc  = max(ind.obj_scores[1] for ind in pareto)
+                pareto = [ind for ind in parent if ind.rank == 0]
+
+                if len(pareto) == 0:
+                    print("⚠️ Warning: No Pareto front, using full population")
+                    pareto = parent
+
+                best_acc = max(ind.obj_scores[1] for ind in pareto)
                 min_feats = min(ind.obj_scores[0] for ind in pareto)
+                max_feats = max(ind.obj_scores[0] for ind in pareto)
                 print(f"  Gen {gen+1:>3} | Pareto size: {len(pareto):>3} | "
-                      f"Best acc: {best_acc:.4f} | Min features: {min_feats}")
+                      f"Best acc: {best_acc:.4f} | Min features: {min_feats} | Max features: {max_feats}")
         
         fronts = self.non_dominated_sorting(parent)
         pareto_front = [parent[i] for i in fronts[0]]
