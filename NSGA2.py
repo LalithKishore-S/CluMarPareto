@@ -416,7 +416,7 @@ class NSGA2_FS():
 
         best_acc_history = []
         pareto_size_history = []
-        patience = 10
+        patience = 15
         tol = 1e-4
 
         for gen in range(self.n_generations):

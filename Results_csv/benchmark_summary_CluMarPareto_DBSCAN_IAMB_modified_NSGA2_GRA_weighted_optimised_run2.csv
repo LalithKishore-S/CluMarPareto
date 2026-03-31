@@ -1,0 +1,8 @@
+method,Avg Rank (Accuracy↑),Avg Rank (Runtime↓),Avg Rank (Features↓),Overall Avg Rank
+LASSO,3.0,1.0,2.75,2.25
+CluMarPareto,2.125,3.25,1.75,2.375
+NSGA2 Standalone,2.125,3.75,1.75,2.5416666666666665
+RF Importance,2.75,2.0,3.75,2.8333333333333335
+IAMB + NSGA2,,,,
+XDBSCAN + IAMB,,,,
+IAMB Only,,,,
