@@ -141,8 +141,10 @@ class IAMB:
             print(f"  Single-feature cluster, kept directly.")
             return list(cluster_indices)
 
-        context = [f for f in self.G if f not in cluster_indices]
+        # context = [f for f in self.G if f not in cluster_indices]
+        context = self.G
         print(f"  context (G\\cluster) = {context}")
+        cluster_indices = [f for f in cluster_indices if f not in self.G]
 
        
         MB = self._forward_with_context(

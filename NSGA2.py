@@ -106,7 +106,8 @@ class NSGA2_FS():
             population.append(mi_base)
 
         # ---- STEP 5: Fill remaining (diverse random but biased) ----
-        while len(population) < self.N:
+        attempts = 0
+        while len(population) < self.N and attempts < 2 * self.N:
             prob = self.mi_scores  # bias toward important features
             individual = np.random.rand(self.n_cols) < prob
 
@@ -117,6 +118,7 @@ class NSGA2_FS():
             if key not in seen:
                 seen.add(key)
                 population.append(individual)
+            attempts += 1
 
         return np.array(population)
     
