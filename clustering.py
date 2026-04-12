@@ -81,21 +81,21 @@ class DBSCAN_Clustering():
         if self.n_clusters == 0 or self.n_clusters == 1:
             self.eps -= 0.05 / 2**i
             self.eps = max(self.eps, 1e-3)
-            print("eps decreased to ",self.eps)
+            # print("eps decreased to ",self.eps)
             return False 
 
         if self.noise_pct > 60:
             self.eps += 0.05 / 2**i
             self.eps=min(self.eps, 0.99)
-            print("eps increased to: ",self.eps)
+            # print("eps increased to: ",self.eps)
             return False  
         return True
     
     def cluster_features(self, feature_names,max_iter=20):
         knn_dists = self.knn_distances()
         self.eps = self.detect_elbow(knn_dists)
-        print("eps calculated through elbow curve: ", self.eps)
-        self.plot_kdist(knn_dists)
+        # print("eps calculated through elbow curve: ", self.eps)
+        # self.plot_kdist(knn_dists)
 
         for i in range(max_iter):
             db = DBSCAN(eps=self.eps, min_samples=self.min_samples, metric="precomputed")

@@ -30,7 +30,7 @@ class CluMarPareto:
         self,
         classifier:      str   = "decisiontree",
         crossover_rate:  float = 0.80,
-        verbose:         bool  = True,
+        verbose:         bool  = False,
     ):
         self.classifier      = classifier
         self.crossover_rate  = crossover_rate

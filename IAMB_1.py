@@ -74,9 +74,9 @@ class IAMB:
         self.G=G
         self.cmi_threshold = 0.05 * (mi_all.max() + 1e-12)
 
-        print(f"\n[Global MI]  median={median_mi:.4f}  mean={mean_mi:.4f} "
-              f"|G|={len(G)}  cmi_threshold={self.cmi_threshold:.4f}")
-        print(f"  G = {G}")
+        # print(f"\n[Global MI]  median={median_mi:.4f}  mean={mean_mi:.4f} "
+        #       f"|G|={len(G)}  cmi_threshold={self.cmi_threshold:.4f}")
+        # print(f"  G = {G}")
         return mi_all, G
 
   
@@ -108,7 +108,7 @@ class IAMB:
                 break
 
             MB.append(best_feature)
-            print(f"    + feat={best_feature}  CMI={best_score:.4f}")
+            # print(f"    + feat={best_feature}  CMI={best_score:.4f}")
 
         return MB
 
@@ -129,22 +129,23 @@ class IAMB:
 
         for f in to_add:
             MB.append(f)
-            print(f"    ~ weak feat={f}  MI={mi_all[f]:.4f}")
+            # print(f"    ~ weak feat={f}  MI={mi_all[f]:.4f}")
 
         return MB
 
    
     def _run_cluster(self, cid, cluster_indices, X_full, y, mi_all):
-        print(f"\n[Cluster {cid}]  features={cluster_indices}")
+        # print(f"\n[Cluster {cid}]  features={cluster_indices}")
 
         if len(cluster_indices) == 1:
-            print(f"  Single-feature cluster, kept directly.")
+            # print(f"  Single-feature cluster, kept directly.")
             return list(cluster_indices)
 
         # context = [f for f in self.G if f not in cluster_indices]
         context = self.G
-        print(f"  context (G\\cluster) = {context}")
+        # print(f"  context (G\\cluster) = {context}")
         cluster_indices = [f for f in cluster_indices if f not in self.G]
+
 
        
         MB = self._forward_with_context(
@@ -156,15 +157,17 @@ class IAMB:
 
       
         if len(MB) == 0:
-            best = max(cluster_indices, key=lambda f: mi_all[f])
-            MB   = [best]
-            print(f"  MB empty — fallback kept feat={best}  "
-                  f"MI={mi_all[best]:.4f}")
+            # print(cluster_indices)
+            if len(cluster_indices) != 0:
+                best = max(cluster_indices, key=lambda f: mi_all[f])
+                MB   = [best]
+            # print(f"  MB empty — fallback kept feat={best}  "
+                #   f"MI={mi_all[best]:.4f}")
 
       
         MB = self._add_weak_features(cluster_indices, MB, mi_all)
 
-        print(f"  → selected {len(MB)}/{len(cluster_indices)}: {MB}")
+        # print(f"  → selected {len(MB)}/{len(cluster_indices)}: {MB}")
         return MB
 
     def run(self, clusters, noise_indices, X, y, context_cap=5):
@@ -187,7 +190,7 @@ class IAMB:
                   f"(MI >= {median_noise:.4f}): {retained}")
             selected.extend(retained)
             
-        print(noise_indices)
+        # print(noise_indices)
 
         selected = sorted(set(selected))
         print(f"\n[IAMB done]  |S_reduced| = {len(selected)}  {selected}")

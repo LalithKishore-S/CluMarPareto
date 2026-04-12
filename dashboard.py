@@ -16,8 +16,8 @@ from pathlib import Path
 
 # ── Paths (same folder structure the notebook uses) ───────────────────────────
 BASE_DIR     = Path(__file__).parent
-RESULTS_CSV  = BASE_DIR / "Results_csv" / "benchmark_results_CluMarPareto_DBSCAN_IAMB_modified_NSGA2_GRA_weighted_optimised_run2.csv"
-SUMMARY_CSV  = BASE_DIR / "Results_csv" / "benchmark_summary_CluMarPareto_DBSCAN_IAMB_modified_NSGA2_GRA_weighted_optimised_run2.csv"
+RESULTS_CSV  = BASE_DIR / "Results_csv" / "benchmark_results_CluMarPareto_DBSCAN_IAMB_modified_NSGA2_GRA_weighted_optimised_run3.csv"
+SUMMARY_CSV  = BASE_DIR / "Results_csv" / "benchmark_summary_CluMarPareto_DBSCAN_IAMB_modified_NSGA2_GRA_weighted_optimised_run3.csv"
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(

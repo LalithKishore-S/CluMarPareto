@@ -393,17 +393,17 @@ class NSGA2_FS():
 
         max_possible = min(2**self.n_cols - 1, self.N)
         if max_possible < self.N:
-            print(f"  Population size capped: {self.N} → {max_possible} "
-                f"(search space = 2^{self.n_cols}-1 = {max_possible})")
+            # print(f"  Population size capped: {self.N} → {max_possible} "
+            #     f"(search space = 2^{self.n_cols}-1 = {max_possible})")
             self.N = max_possible
         initial_population = self.generate_populations(warm_start_indices = warm_start_indices)
         objective_scores = [self.fitness_evaluation(individual, X, y) for individual in initial_population]
         initial_population = [Individual(initial_population[i], objective_scores[i]) for i in range(initial_population.shape[0])]
         fronts = self.non_dominated_sorting(initial_population)
 
-        print(f"\nClassifier      : {self.classifier}")
-        print(f"Population size : {self.N}")
-        print(f"Number of fronts: {len(fronts)}\n")
+        # print(f"\nClassifier      : {self.classifier}")
+        # print(f"Population size : {self.N}")
+        # print(f"Number of fronts: {len(fronts)}\n")
 
         # for rank, front in enumerate(fronts):
         #     print(f"  Rank {rank+1} -- {len(front)} individual(s):")
@@ -443,7 +443,7 @@ class NSGA2_FS():
 
             pareto = [ind for ind in parent if ind.rank == 0]
             if len(pareto) == 0:
-                print("⚠️ Warning: No Pareto front, using full population")
+                # print(" Warning: No Pareto front, using full population")
                 pareto = parent
             pareto_size = len(pareto)
             best_acc = max(ind.obj_scores[1] for ind in pareto)
@@ -454,14 +454,14 @@ class NSGA2_FS():
             if (gen + 1) % 10 == 0:
 
                 if len(pareto) == 0:
-                    print("⚠️ Warning: No Pareto front, using full population")
+                    # print(" Warning: No Pareto front, using full population")
                     pareto = parent
 
                 best_acc = max(ind.obj_scores[1] for ind in pareto)
                 min_feats = min(ind.obj_scores[0] for ind in pareto)
                 max_feats = max(ind.obj_scores[0] for ind in pareto)
-                print(f"  Gen {gen+1:>3} | Pareto size: {len(pareto):>3} | "
-                      f"Best acc: {best_acc:.4f} | Min features: {min_feats} | Max features: {max_feats}")
+                # print(f"  Gen {gen+1:>3} | Pareto size: {len(pareto):>3} | "
+                #       f"Best acc: {best_acc:.4f} | Min features: {min_feats} | Max features: {max_feats}")
                 
             if len(best_acc_history) >= patience:
                 acc_recent = best_acc_history[-patience:]
@@ -471,7 +471,7 @@ class NSGA2_FS():
                 size_stable = max(size_recent) - min(size_recent) <= 2
 
                 if acc_stable and size_stable:
-                    print(f"Converged at generation {gen}")
+                    # print(f"Converged at generation {gen}")
                     break
         
         fronts = self.non_dominated_sorting(parent)
